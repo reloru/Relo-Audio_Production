@@ -1,5 +1,9 @@
 {
+  "target_lufs": -11.0,
+  "ceiling_dbtp": -2.0,
   "eq": [
     {"type": "peak", "freq": 1800.0, "gain_db": 1.0, "q": 0.9}
-  ]
+  ],
+  "clipper": {"enabled": true, "ceiling_offset_db": 2.5, "knee_db": 1.0},
+  "fade": {"in_ms": 5.0, "out_ms": 800.0}
 }

@@ -61,6 +61,11 @@ def test_meter():
               abs(own["integrated"] - ff["integrated"]) <= 0.1, f"{own['integrated']:.2f} vs {ff['integrated']}")
         check("loudness range matches ffmpeg ebur128", abs(own["lra"] - ff["lra"]) <= 0.2,
               f"{own['lra']:.2f} vs {ff['lra']}")
+        hot = Path(d) / "hot.wav"
+        sf.write(hot, sine(1000, 1.5, 1.0), SR, subtype="FLOAT")
+        ff_tp = M.ffmpeg_true_peak(hot)
+        check("ffmpeg true-peak check reports overs above 0 dBFS instead of clipping them",
+              abs(ff_tp - 1.5) <= 0.1, f"{ff_tp:.2f} dBTP for a +1.5 dBFS float sine")
 
 
 def test_filters():
@@ -118,6 +123,15 @@ def test_clipper():
           f"{before:.2f} -> {after:.2f} dBTP, untouched={untouched}")
 
 
+def test_fades():
+    x = np.ones((SR, 2))
+    y = M.apply_fades(x, SR, {"in_ms": 10.0, "out_ms": 100.0})
+    n_in, n_out = 480, 4800
+    ok = (np.all(y[0] == 0) and np.all(y[-1] == 0) and np.all(np.diff(y[:n_in, 0]) > 0)
+          and np.all(np.diff(y[-n_out:, 0]) < 0) and np.all(y[n_in:-n_out] == 1.0))
+    check("fades reach zero at both edges, are monotonic, and leave the middle untouched", ok)
+
+
 def test_wav24():
     x = sine(440, -3.0, 0.5)
     with tempfile.TemporaryDirectory() as d:
@@ -135,6 +149,7 @@ def main():
     test_filters()
     test_dynamics()
     test_clipper()
+    test_fades()
     test_wav24()
     print(f"\n{'all checks passed' if not FAILED else f'{len(FAILED)} check(s) failed'}")
     return 1 if FAILED else 0

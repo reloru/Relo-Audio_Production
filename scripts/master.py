@@ -55,6 +55,7 @@ DEFAULTS = {
              "threshold_pct": 90.0, "threshold_offset_db": 0.0, "max_gr_db": 6.0},
     "clipper": {"enabled": False, "ceiling_offset_db": 1.0, "knee_db": 1.0},
     "limiter": {"lookahead_ms": 2.0, "hold_ms": 8.0, "release_ms": 40.0},
+    "fade": {"in_ms": 5.0, "out_ms": 50.0},
     "report_block_s": 30.0,
 }
 
@@ -271,6 +272,17 @@ def oversampled_clip(x, sr, ceiling_dbtp, clip_cfg, chunk=1 << 20, pad=256):
     return out
 
 
+def apply_fades(x, sr, fade):
+    """Raised-cosine fade-in/out reaching exactly zero at the file edges."""
+    x = x.copy()
+    for key, sl in (("in_ms", slice(None)), ("out_ms", slice(None, None, -1))):
+        n = min(int(round(fade.get(key, 0.0) * sr / 1000)), len(x))
+        if n > 0:
+            ramp = 0.5 - 0.5 * np.cos(np.pi * np.arange(n) / n)
+            x[sl][:n] *= ramp[:, None]
+    return x
+
+
 # ---------------------------------------------------------------- output
 
 def write_wav24(path, x, sr, title=None, artist=None, seed=0):
@@ -315,17 +327,24 @@ def encode_mp3(wav, mp3, src, title):
 
 
 def ffmpeg_true_peak(path):
-    """Independent true peak: ffmpeg resample to 192 kHz, then astats peak (2 decimals)."""
+    """Independent true peak: ffmpeg resample to 192 kHz, then astats peak.
+
+    The chain is pinned to double precision; left to negotiate, aresample/astats can
+    settle on an integer format and clip overs at 0 dBFS, hiding codec overshoot.
+    """
     err = subprocess.run(
         ["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-map", "0:a:0", "-af",
-         "aresample=192000,astats=measure_perchannel=none:measure_overall=Peak_level",
+         "aformat=sample_fmts=dbl,aresample=192000,aformat=sample_fmts=dbl,"
+         "astats=measure_perchannel=none:measure_overall=Peak_level",
          "-f", "null", "-"], check=True, capture_output=True, text=True).stderr
     vals = [ln.split(":")[-1] for ln in err.splitlines() if "Peak level dB" in ln]
     return float(vals[-1])
 
 
 CODECS = [("aac_256k", ["-c:a", "aac", "-b:a", "256k"], "m4a"),
+          ("aac_128k", ["-c:a", "aac", "-b:a", "128k"], "m4a"),
           ("vorbis_160k", ["-c:a", "libvorbis", "-b:a", "160k"], "ogg"),
+          ("vorbis_96k", ["-c:a", "libvorbis", "-b:a", "96k"], "ogg"),
           ("opus_128k", ["-c:a", "libopus", "-b:a", "128k"], "opus"),
           ("mp3_320k", ["-c:a", "libmp3lame", "-b:a", "320k"], "mp3")]
 
@@ -468,6 +487,8 @@ def master(src, out_dir, name, title, cfg, mp3=True, check_codecs=False, log=pri
     y, stats = pre_limiter(x, sr, cfg, log)
     out, gain_db, g, clip_stats = limit_to_target(y, sr, cfg, log)
     lim_gr = -20 * np.log10(np.maximum(g, 1e-12))
+    out = apply_fades(out, sr, cfg["fade"])
+    log(f"fades: in {cfg['fade'].get('in_ms', 0)} ms, out {cfg['fade'].get('out_ms', 0)} ms")
 
     wav = out_dir / f"{name}.wav"
     artist = None

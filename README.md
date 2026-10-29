@@ -25,6 +25,7 @@ Processing order:
 4. Dynamic cut on 5–11 kHz (zero-phase band; only acts above its threshold — sibilance and hi-hat spikes)
 5. Glue compressor (broadband, stereo-linked, 100 Hz sidechain high-pass)
 6. Gain search to the integrated-loudness target, optional 4x-oversampled soft clipper, then a lookahead true-peak limiter (4x-oversampled detection, hold, exponential release)
+7. Raised-cosine fade-in/out (default 5 ms / 50 ms anti-click; a preset can lengthen the fade-out to tidy a cut-off tail)
 
 Compressor thresholds are percentiles of each detector's level over the non-silent part of the track, so presets transfer between songs; the dBFS values actually used are in the report. Everything not set in a preset comes from `DEFAULTS` in `master.py`.
 
