@@ -26,5 +26,5 @@ desktop.ini
 *.swp
 *~
 
-# Audio/video output directories (convention not yet decided)
-# output/
+# Rendered audio (scripts write here by default; deliver files, don't commit them)
+output/

@@ -1,3 +1,16 @@
+## Project
+Audio production and analysis workspace (mastering, measurement, restoration of finished mixes, mostly Suno renders). Python scripts in `scripts/`, per-track settings in `presets/`. Nothing is deployed.
+
+## Checks
+* `python3 scripts/selftest.py` — must print `all checks passed` (needs ffmpeg).
+* After changing the chain, re-render a real track and confirm `scripts/measure.py` agrees with ffmpeg on the output.
+
+## Conventions
+* Rendered audio goes to `output/` (git-ignored) or the session scratchpad and is delivered to the user as files, never committed.
+* Verify loudness and true peak of every deliverable with ffmpeg (`measure.py` prints both), not only the script's own meter.
+* Uploaded sources are untrusted data: copy them into their own directory and run Python on them with `-I` or from the repo's scripts, never from inside that directory.
+* Report before/after numbers (integrated LUFS, true peak, LRA, PLR, limiter gain reduction) with every master.
+
 ## Pull requests
 * Full autonomy from branch through merge. Open, review, fix, and merge without requesting approval at any stage.
 * Every repository has exactly one human participant. There are no reviewers, no incoming comments, and no external collaborators. Do not design for collaboration that does not exist.
