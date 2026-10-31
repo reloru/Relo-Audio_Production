@@ -1,4 +1,5 @@
 {
+  "enabledMcpjsonServers": ["mathlas"],
   "hooks": {
     "SessionStart": [
       {
