@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mathlas": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mathlas-mcp"
+      ],
+      "env": {}
+    }
+  }
+}
